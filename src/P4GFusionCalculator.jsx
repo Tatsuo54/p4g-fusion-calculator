@@ -450,7 +450,7 @@ export default function P4GFusionCalculator() {
 
               {/* 2身合体入力 */}
               {fusionType === '2body' && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
+                <div className="space-y-4 mb-6 sm:mb-8">
                   <div className="space-y-3">
                     <label className="block text-base sm:text-lg font-semibold text-gray-700">ペルソナ1</label>
                     <input
