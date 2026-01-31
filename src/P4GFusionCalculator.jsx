@@ -1,4 +1,98 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+
+// カスタムドロップダウンコンポーネント
+function CustomSelect({ value, onChange, options, placeholder = "選択してください", className = "" }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+  const buttonRef = useRef(null);
+  const menuRef = useRef(null);
+
+  // クリックで外側をクリック時にドロップダウンを閉じる
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // ドロップダウンを開く時にメニューを表示範囲内に配置
+  useEffect(() => {
+    if (isOpen && menuRef.current && buttonRef.current) {
+      // ボタンの下の余白を確認
+      const buttonRect = buttonRef.current.getBoundingClientRect();
+      const menuHeight = menuRef.current.scrollHeight;
+      const spaceBelow = window.innerHeight - buttonRect.bottom;
+      const spaceAbove = buttonRect.top;
+
+      // 下に表示できスペースがあれば下に、なければ上に表示
+      if (spaceBelow > menuHeight + 10) {
+        menuRef.current.style.top = '100%';
+        menuRef.current.style.bottom = 'auto';
+        menuRef.current.style.marginTop = '0.5rem';
+      } else if (spaceAbove > menuHeight + 10) {
+        menuRef.current.style.top = 'auto';
+        menuRef.current.style.bottom = '100%';
+        menuRef.current.style.marginBottom = '0.5rem';
+      } else {
+        // 両側が狭い場合は下を優先
+        menuRef.current.style.top = '100%';
+        menuRef.current.style.bottom = 'auto';
+        menuRef.current.style.marginTop = '0.5rem';
+      }
+    }
+  }, [isOpen]);
+
+  const selectedLabel = options.find(opt => opt.value === value)?.label || placeholder;
+
+  return (
+    <div ref={containerRef} className="relative w-full">
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`w-full text-left px-3 sm:px-4 py-2 sm:py-3 border-2 border-amber-300 rounded-lg focus:outline-none focus:border-amber-500 bg-white text-gray-800 text-sm sm:text-base flex justify-between items-center ${className}`}
+      >
+        <span>{selectedLabel}</span>
+        <svg
+          className={`w-5 h-5 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+        </svg>
+      </button>
+
+      {isOpen && (
+        <div
+          ref={menuRef}
+          className="absolute left-0 right-0 bg-white border-2 border-amber-300 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto"
+          style={{ minWidth: '100%' }}
+        >
+          {options.map((opt, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => {
+                onChange(opt.value);
+                setIsOpen(false);
+              }}
+              className={`w-full text-left px-3 sm:px-4 py-2 sm:py-2.5 hover:bg-amber-100 transition-colors text-sm sm:text-base ${
+                opt.value === value ? 'bg-amber-200 font-semibold text-amber-900' : 'text-gray-800'
+              } ${idx === 0 ? 'rounded-t-sm' : ''} ${idx === options.length - 1 ? 'rounded-b-sm' : ''}`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function P4GFusionCalculator() {
   const [mode, setMode] = useState('fusion');
@@ -460,16 +554,18 @@ export default function P4GFusionCalculator() {
                       onChange={(e) => setSearch1(e.target.value)}
                       className="w-full px-3 sm:px-4 py-2 border-2 border-amber-300 rounded-lg focus:outline-none focus:border-amber-500 text-sm sm:text-base"
                     />
-                    <select
+                    <CustomSelect
                       value={persona1}
-                      onChange={(e) => setPersona1(e.target.value)}
-                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-amber-300 rounded-lg focus:outline-none focus:border-amber-500 bg-white text-gray-800 text-sm sm:text-base"
-                    >
-                      <option value="">選択してください</option>
-                      {filteredPersonas1.map((p, idx) => (
-                        <option key={idx} value={p.name}>【{p.arc}】{p.name} (Lv.{p.lv})</option>
-                      ))}
-                    </select>
+                      onChange={(val) => setPersona1(val)}
+                      options={[
+                        { value: '', label: '選択してください' },
+                        ...filteredPersonas1.map((p) => ({
+                          value: p.name,
+                          label: `【${p.arc}】${p.name} (Lv.${p.lv})`
+                        }))
+                      ]}
+                      placeholder="選択してください"
+                    />
                     {search1 && <p className="text-xs sm:text-sm text-gray-600">{filteredPersonas1.length}件</p>}
                   </div>
 
@@ -482,16 +578,18 @@ export default function P4GFusionCalculator() {
                       onChange={(e) => setSearch2(e.target.value)}
                       className="w-full px-3 sm:px-4 py-2 border-2 border-amber-300 rounded-lg focus:outline-none focus:border-amber-500 text-sm sm:text-base"
                     />
-                    <select
+                    <CustomSelect
                       value={persona2}
-                      onChange={(e) => setPersona2(e.target.value)}
-                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-amber-300 rounded-lg focus:outline-none focus:border-amber-500 bg-white text-gray-800 text-sm sm:text-base"
-                    >
-                      <option value="">選択してください</option>
-                      {filteredPersonas2.map((p, idx) => (
-                        <option key={idx} value={p.name}>【{p.arc}】{p.name} (Lv.{p.lv})</option>
-                      ))}
-                    </select>
+                      onChange={(val) => setPersona2(val)}
+                      options={[
+                        { value: '', label: '選択してください' },
+                        ...filteredPersonas2.map((p) => ({
+                          value: p.name,
+                          label: `【${p.arc}】${p.name} (Lv.${p.lv})`
+                        }))
+                      ]}
+                      placeholder="選択してください"
+                    />
                     {search2 && <p className="text-xs sm:text-sm text-gray-600">{filteredPersonas2.length}件</p>}
                   </div>
                 </div>
@@ -509,24 +607,26 @@ export default function P4GFusionCalculator() {
                       onChange={(e) => setSearch1(e.target.value)}
                       className="w-full px-3 sm:px-4 py-2 border-2 border-amber-300 rounded-lg focus:outline-none focus:border-amber-500 text-sm sm:text-base"
                     />
-                    <select
+                    <CustomSelect
                       value={persona1}
-                      onChange={(e) => {
-                        setPersona1(e.target.value);
-                        if (e.target.value) {
-                          const p = personaData.find(p => p.name === e.target.value);
+                      onChange={(val) => {
+                        setPersona1(val);
+                        if (val) {
+                          const p = personaData.find(p => p.name === val);
                           if (p) setCurrentLv1(p.lv.toString());
                         } else {
                           setCurrentLv1('');
                         }
                       }}
-                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-amber-300 rounded-lg focus:outline-none focus:border-amber-500 bg-white text-gray-800 text-sm sm:text-base"
-                    >
-                      <option value="">選択してください</option>
-                      {filteredPersonas1.map((p, idx) => (
-                        <option key={idx} value={p.name}>【{p.arc}】{p.name} (Lv.{p.lv})</option>
-                      ))}
-                    </select>
+                      options={[
+                        { value: '', label: '選択してください' },
+                        ...filteredPersonas1.map((p) => ({
+                          value: p.name,
+                          label: `【${p.arc}】${p.name} (Lv.${p.lv})`
+                        }))
+                      ]}
+                      placeholder="選択してください"
+                    />
                     {search1 && <p className="text-xs sm:text-sm text-gray-600">{filteredPersonas1.length}件</p>}
                     {persona1 && (
                       <div>
@@ -559,24 +659,26 @@ export default function P4GFusionCalculator() {
                       onChange={(e) => setSearch2(e.target.value)}
                       className="w-full px-3 sm:px-4 py-2 border-2 border-amber-300 rounded-lg focus:outline-none focus:border-amber-500 text-sm sm:text-base"
                     />
-                    <select
+                    <CustomSelect
                       value={persona2}
-                      onChange={(e) => {
-                        setPersona2(e.target.value);
-                        if (e.target.value) {
-                          const p = personaData.find(p => p.name === e.target.value);
+                      onChange={(val) => {
+                        setPersona2(val);
+                        if (val) {
+                          const p = personaData.find(p => p.name === val);
                           if (p) setCurrentLv2(p.lv.toString());
                         } else {
                           setCurrentLv2('');
                         }
                       }}
-                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-amber-300 rounded-lg focus:outline-none focus:border-amber-500 bg-white text-gray-800 text-sm sm:text-base"
-                    >
-                      <option value="">選択してください</option>
-                      {filteredPersonas2.map((p, idx) => (
-                        <option key={idx} value={p.name}>【{p.arc}】{p.name} (Lv.{p.lv})</option>
-                      ))}
-                    </select>
+                      options={[
+                        { value: '', label: '選択してください' },
+                        ...filteredPersonas2.map((p) => ({
+                          value: p.name,
+                          label: `【${p.arc}】${p.name} (Lv.${p.lv})`
+                        }))
+                      ]}
+                      placeholder="選択してください"
+                    />
                     {search2 && <p className="text-xs sm:text-sm text-gray-600">{filteredPersonas2.length}件</p>}
                     {persona2 && (
                       <div>
@@ -609,24 +711,26 @@ export default function P4GFusionCalculator() {
                       onChange={(e) => setSearch3(e.target.value)}
                       className="w-full px-3 sm:px-4 py-2 border-2 border-amber-300 rounded-lg focus:outline-none focus:border-amber-500 text-sm sm:text-base"
                     />
-                    <select
+                    <CustomSelect
                       value={persona3}
-                      onChange={(e) => {
-                        setPersona3(e.target.value);
-                        if (e.target.value) {
-                          const p = personaData.find(p => p.name === e.target.value);
+                      onChange={(val) => {
+                        setPersona3(val);
+                        if (val) {
+                          const p = personaData.find(p => p.name === val);
                           if (p) setCurrentLv3(p.lv.toString());
                         } else {
                           setCurrentLv3('');
                         }
                       }}
-                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-amber-300 rounded-lg focus:outline-none focus:border-amber-500 bg-white text-gray-800 text-sm sm:text-base"
-                    >
-                      <option value="">選択してください</option>
-                      {filteredPersonas3.map((p, idx) => (
-                        <option key={idx} value={p.name}>【{p.arc}】{p.name} (Lv.{p.lv})</option>
-                      ))}
-                    </select>
+                      options={[
+                        { value: '', label: '選択してください' },
+                        ...filteredPersonas3.map((p) => ({
+                          value: p.name,
+                          label: `【${p.arc}】${p.name} (Lv.${p.lv})`
+                        }))
+                      ]}
+                      placeholder="選択してください"
+                    />
                     {search3 && <p className="text-xs sm:text-sm text-gray-600">{filteredPersonas3.length}件</p>}
                     {persona3 && (
                       <div>
@@ -717,16 +821,18 @@ export default function P4GFusionCalculator() {
                     onChange={(e) => setSearchTarget(e.target.value)}
                     className="w-full px-3 sm:px-4 py-2 border-2 border-amber-300 rounded-lg focus:outline-none focus:border-amber-500 text-sm sm:text-base"
                   />
-                  <select
+                  <CustomSelect
                     value={targetPersona}
-                    onChange={(e) => setTargetPersona(e.target.value)}
-                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-amber-300 rounded-lg focus:outline-none focus:border-amber-500 bg-white text-gray-800 text-sm sm:text-base"
-                  >
-                    <option value="">選択してください</option>
-                    {filteredTargetPersonas.map((p, idx) => (
-                      <option key={idx} value={p.name}>【{p.arc}】{p.name} (Lv.{p.lv})</option>
-                    ))}
-                  </select>
+                    onChange={(val) => setTargetPersona(val)}
+                    options={[
+                      { value: '', label: '選択してください' },
+                      ...filteredTargetPersonas.map((p) => ({
+                        value: p.name,
+                        label: `【${p.arc}】${p.name} (Lv.${p.lv})`
+                      }))
+                    ]}
+                    placeholder="選択してください"
+                  />
                   {searchTarget && <p className="text-xs sm:text-sm text-gray-600">{filteredTargetPersonas.length}件</p>}
                 </div>
 
@@ -746,16 +852,18 @@ export default function P4GFusionCalculator() {
                       }}
                       className="w-full px-3 sm:px-4 py-2 border-2 border-blue-300 rounded-lg focus:outline-none focus:border-blue-500 text-sm sm:text-base"
                     />
-                    <select
+                    <CustomSelect
                       value={materialPersona1}
-                      onChange={(e) => setMaterialPersona1(e.target.value)}
-                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-blue-300 rounded-lg focus:outline-none focus:border-blue-500 bg-white text-gray-800 text-sm sm:text-base"
-                    >
-                      <option value="">指定なし</option>
-                      {filteredMaterial1Personas.map((p, idx) => (
-                        <option key={idx} value={p.name}>【{p.arc}】{p.name} (Lv.{p.lv})</option>
-                      ))}
-                    </select>
+                      onChange={(val) => setMaterialPersona1(val)}
+                      options={[
+                        { value: '', label: '指定なし' },
+                        ...filteredMaterial1Personas.map((p) => ({
+                          value: p.name,
+                          label: `【${p.arc}】${p.name} (Lv.${p.lv})`
+                        }))
+                      ]}
+                      placeholder="指定なし"
+                    />
                     {searchMaterial1 && <p className="text-xs sm:text-sm text-gray-600">{filteredMaterial1Personas.length}件</p>}
                   </div>
                 )}
@@ -776,16 +884,18 @@ export default function P4GFusionCalculator() {
                       }}
                       className="w-full px-3 sm:px-4 py-2 border-2 border-blue-300 rounded-lg focus:outline-none focus:border-blue-500 text-sm sm:text-base"
                     />
-                    <select
+                    <CustomSelect
                       value={materialPersona2}
-                      onChange={(e) => setMaterialPersona2(e.target.value)}
-                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-blue-300 rounded-lg focus:outline-none focus:border-blue-500 bg-white text-gray-800 text-sm sm:text-base"
-                    >
-                      <option value="">指定なし</option>
-                      {filteredMaterial2Personas.map((p, idx) => (
-                        <option key={idx} value={p.name}>【{p.arc}】{p.name} (Lv.{p.lv})</option>
-                      ))}
-                    </select>
+                      onChange={(val) => setMaterialPersona2(val)}
+                      options={[
+                        { value: '', label: '指定なし' },
+                        ...filteredMaterial2Personas.map((p) => ({
+                          value: p.name,
+                          label: `【${p.arc}】${p.name} (Lv.${p.lv})`
+                        }))
+                      ]}
+                      placeholder="指定なし"
+                    />
                     {searchMaterial2 && <p className="text-xs sm:text-sm text-gray-600">{filteredMaterial2Personas.length}件</p>}
                   </div>
                 )}
