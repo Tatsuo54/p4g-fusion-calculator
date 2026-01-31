@@ -975,6 +975,18 @@ export default function P4GFusionCalculator() {
             </div>
           )}
         </div>
+
+        {/* フッター */}
+        <div className="mt-8 text-center">
+          <a
+            href="https://cloudavenue.jp/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gray-600 hover:text-amber-600 transition-colors"
+          >
+            cloudavenue.jp
+          </a>
+        </div>
       </div>
     </div>
   );
